@@ -14,12 +14,14 @@ def index():
             return "Nenhum arquivo enviado!", 400
         
         files = request.files.getlist("xml_files")
+        xml_type = request.form.get("xml_type")
         
         data = []
         for file in files:
             if file.filename.endswith(".xml"):
                 try:
-                    data.append(nfe_parser(file.read()))
+                    if xml_type == "nfe":
+                        data.append(nfe_parser(file.read()))
                 except Exception as e:
                     print(f"Erro no arquivo {file.filename}: {e}")
 

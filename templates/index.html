@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Múltiplo de XML</title>
+    <title>XML Reader</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <h1 class="text-2xl font-bold text-gray-800 text-center mb-6">Envie vários XMLs</h1>
+        <h1 class="text-2xl font-bold text-gray-800 text-center mb-6">XML Reader</h1>
 
         <form id="uploadForm" method="POST" enctype="multipart/form-data" class="space-y-4">
             <div>
@@ -43,7 +43,6 @@
                         <p class="text-xs text-gray-500">Arquivos XML até 10MB</p>
                     </div>
                 </div>
-                <!-- Container para mostrar os arquivos selecionados -->
                 <div id="selected-files" class="mt-2 text-sm text-gray-600 hidden">
                     <p class="font-medium">Arquivos selecionados:</p>
                     <ul id="file-list" class="list-disc list-inside max-h-40 overflow-y-auto"></ul>
@@ -58,7 +57,6 @@
     </div>
 
     <script>
-        // Função para mostrar arquivos selecionados
         function showSelectedFiles(input) {
             const selectedFilesContainer = document.getElementById('selected-files');
             const fileList = document.getElementById('file-list');
@@ -78,12 +76,10 @@
             }
         }
 
-        // Resetar o formulário quando a página carrega
         window.addEventListener('load', function () {
             const form = document.getElementById('uploadForm');
             form.reset();
 
-            // Limpar a lista de arquivos selecionados
             document.getElementById('selected-files').classList.add('hidden');
             document.getElementById('file-list').innerHTML = '';
         });

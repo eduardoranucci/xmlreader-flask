@@ -10,10 +10,10 @@ app = Flask(__name__)
 def index():
     if request.method == "POST":
 
-        if "xmls_files" not in request.files:
+        if "xml_files" not in request.files:
             return "Nenhum arquivo enviado!", 400
         
-        files = request.files.getlist("xmls_files")
+        files = request.files.getlist("xml_files")
         
         data = []
         for file in files:

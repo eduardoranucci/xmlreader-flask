@@ -1,7 +1,7 @@
 from utils import get_text, parse_date
 from lxml import etree
 
-def nfe_parser(xml_data):
+def parser_nfe(xml_data):
     root = etree.fromstring(xml_data)
     ns = {"nfe": "http://www.portalfiscal.inf.br/nfe"}
     

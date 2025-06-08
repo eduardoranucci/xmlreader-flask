@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file
-from parser import nfe_parser
+from parser import parser_nfe
 from datetime import datetime
 from io import BytesIO
 import pandas as pd
@@ -21,7 +21,7 @@ def index():
             if file.filename.endswith(".xml"):
                 try:
                     if xml_type == "nfe":
-                        data.append(nfe_parser(file.read()))
+                        data.append(parser_nfe(file.read()))
                 except Exception as e:
                     print(f"Erro no arquivo {file.filename}: {e}")
 

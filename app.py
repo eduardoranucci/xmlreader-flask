@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, session
 from parser import parser_nfe, parser_nfse
 from openpyxl import Workbook
 from datetime import datetime
 from io import BytesIO
+import json
 
 app = Flask(__name__)
+app.secret_key = "session-key" # Chave secreta para poder utilizar session
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -28,31 +30,42 @@ def index():
                     return render_template("error.html", msg=f"Erro ao processar o arquivo {file.filename}: {e}"), 500
 
         if data:
-            workbook = Workbook()
-            sheet = workbook.active
-            sheet.title = "Geral"
-
-            headers = list(data[0].keys())
-            sheet.append(headers)
-
-            for row in data:
-                sheet.append(list(row.values()))
-
-            excel_buffer = BytesIO()
-            workbook.save(excel_buffer)
-            excel_buffer.seek(0)
-            
-            timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
-            return send_file(
-                excel_buffer,
-                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                as_attachment=True,
-                download_name=f"relatorio_{timestamp}.xlsx"
-            )
+            session["parsed_data"] = json.dumps(data)
+            return render_template("results.html", data=data)
         else:
             return render_template("error.html", msg="Nenhum dado válido encontrado!"), 400
 
+    session.pop("parsed_data", None)
     return render_template("index.html")
+
+@app.route("/export", methods=["POST"])
+def export():
+    if "parsed_data" not in session:
+        return render_template("error.html", msg="Nenhum dado para exportar!"), 400
+
+    data = json.loads(session["parsed_data"])
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Geral"
+
+    headers = list(data[0].keys())
+    sheet.append(headers)
+
+    for row in data:
+        sheet.append(list(row.values()))
+
+    excel_buffer = BytesIO()
+    workbook.save(excel_buffer)
+    excel_buffer.seek(0)
+    
+    timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
+    return send_file(
+        excel_buffer,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"relatorio_{timestamp}.xlsx"
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

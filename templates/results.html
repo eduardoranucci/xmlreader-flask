@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="p-4 max-w-7xl mx-auto">
+        <h2 class="text-xl font-bold mb-4">Resultados</h2>
+
+        <div class="flex justify-between items-center mb-4">
+            <form action="/export" method="post">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Exportar para
+                    Excel</button>
+            </form>
+            <a href="/" class="text-sm text-blue-600 hover:underline">← Voltar</a>
+        </div>
+
+        <div class="overflow-auto shadow rounded">
+            <table class="min-w-full text-sm text-left text-gray-700 border">
+                <thead class="bg-gray-100 font-bold">
+                    <tr>
+                        {% for key in data[0].keys() %}
+                            <th class="px-4 py-2 border whitespace-nowrap">{{ key }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                        <tr class="hover:bg-gray-50">
+                            {% for value in row.values() %}
+                                <td class="px-4 py-2 border whitespace-nowrap">{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

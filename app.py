@@ -11,8 +11,8 @@ def index():
     if request.method == "POST":
 
         if "xml_files" not in request.files:
-            return "Nenhum arquivo enviado!", 400
-        
+            return render_template("error.html", msg="Nenhum arquivo enviado!"), 400
+
         files = request.files.getlist("xml_files")
         xml_type = request.form.get("xml_type")
         
@@ -25,7 +25,7 @@ def index():
                     elif xml_type == "nfse":
                         data.extend(parser_nfse(file.read()))
                 except Exception as e:
-                    print(f"Erro no arquivo {file.filename}: {e}")
+                    return render_template("error.html", msg=f"Erro ao processar o arquivo {file.filename}: {e}"), 500
 
         if data:
             workbook = Workbook()
@@ -50,8 +50,8 @@ def index():
                 download_name=f"relatorio_{timestamp}.xlsx"
             )
         else:
-            return "Nenhum dado válido encontrado!", 400
-    
+            return render_template("error.html", msg="Nenhum dado válido encontrado!"), 400
+
     return render_template("index.html")
 
 if __name__ == "__main__":

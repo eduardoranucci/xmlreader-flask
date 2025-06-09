@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, send_file, session
+from openpyxl.utils import get_column_letter
 from parser import parser_nfe, parser_nfse
 from openpyxl import Workbook
 from datetime import datetime
@@ -54,6 +55,13 @@ def export():
 
     for row in data:
         sheet.append(list(row.values()))
+
+    for i, col in enumerate(sheet.columns, 1):
+        max_length = 0
+        for cell in col:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        sheet.column_dimensions[get_column_letter(i)].width = max_length + 2
 
     excel_buffer = BytesIO()
     workbook.save(excel_buffer)

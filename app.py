@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, send_file
-from parser import parser_nfe
+from parser import parser_nfe, parser_nfse
+from openpyxl import Workbook
 from datetime import datetime
 from io import BytesIO
-import pandas as pd
 
 app = Flask(__name__)
 
@@ -18,17 +18,28 @@ def index():
         
         data = []
         for file in files:
-            if file.filename.endswith(".xml"):
+            if file.filename.lower().endswith(".xml"):
                 try:
                     if xml_type == "nfe":
                         data.append(parser_nfe(file.read()))
+                    elif xml_type == "nfse":
+                        data.extend(parser_nfse(file.read()))
                 except Exception as e:
                     print(f"Erro no arquivo {file.filename}: {e}")
 
         if data:
-            df = pd.DataFrame(data)
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.title = "Geral"
+
+            headers = list(data[0].keys())
+            sheet.append(headers)
+
+            for row in data:
+                sheet.append(list(row.values()))
+
             excel_buffer = BytesIO()
-            df.to_excel(excel_buffer, index=False, engine="openpyxl")
+            workbook.save(excel_buffer)
             excel_buffer.seek(0)
             
             timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")

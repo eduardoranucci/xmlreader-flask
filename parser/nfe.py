@@ -46,14 +46,16 @@ def parse_nfe(xml_data):
             4: 'Devolução'
         }.get(val, val)
 
+    nfe_number = get_text(ide, './/nfe:nNF', ns)
+    emit_document = get_document(emit)
     summary = {
-        "Número": get_text(ide, './/nfe:nNF', ns),
+        "Número": nfe_number,
         "Série": get_text(ide, './/nfe:serie', ns),
         "Emissão": parse_date(get_text(ide, './/nfe:dhEmi', ns)),
         "Tipo": 'Saída' if get_text(ide, './/nfe:tpNF', ns) == '1' else 'Entrada',
         "Finalidade": get_purpose(ide),
         "Natureza": get_text(ide, './/nfe:natOp', ns),
-        "CNPJ/CPF Emitente": get_document(emit),
+        "CNPJ/CPF Emitente": emit_document,
         "Emitente": get_text(emit, './/nfe:xNome', ns),
         "Município Emitente": get_text(emit, './/nfe:enderEmit/nfe:xMun', ns),
         "UF Emitente": get_text(emit, './/nfe:enderEmit/nfe:UF', ns),
@@ -104,5 +106,144 @@ def parse_nfe(xml_data):
 
     data = {
         "Resumo": summary,
+        "Produtos": parse_nfe_products(det_list, nfe_number, emit_document, ns)
     }
     return data
+
+def parse_nfe_products(det_list, nfe, document, ns):
+    icms_tags = ['00', '02', '10', '15', '20', '30', '40', '41', '50', '51', '53', '60', '61', '70', '90']
+    cson_tags = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900']
+    trib_tags = ['NT', 'Trib', 'Aliq', 'Qtde', 'Outr']
+
+    products = []
+    for det in det_list:
+        prod = det.find('.//nfe:prod', namespaces=ns)
+        imposto = det.find('.//nfe:imposto', namespaces=ns)
+        imp_icms = imposto.find('.//nfe:ICMS', namespaces=ns) if imposto is not None else None
+
+        product = {
+            "Número NFe": nfe,
+            "CNPJ/CPF Emitente": document,
+            "Código": get_text(prod, './/nfe:cProd', ns),
+            "Descrição": get_text(prod, './/nfe:xProd', ns),
+            "NCM": get_text(prod, './/nfe:NCM', ns),
+            "CEST": get_text(prod, './/nfe:CEST', ns),
+            "CFOP": get_text(prod, './/nfe:CFOP', ns),
+            "Unidade": get_text(prod, './/nfe:uCom', ns),
+            "Quantidade": get_text(prod, './/nfe:qCom', ns),
+            "Valor Unitário": get_text(prod, './/nfe:vUnCom', ns),
+            "Valor Total": get_text(prod, './/nfe:vProd', ns),
+            "Quantidade Tributável": get_text(prod, './/nfe:qTrib', ns),
+            "Valor Unitário Tributável": get_text(prod, './/nfe:vUnTrib', ns),
+        }
+
+        # ICMS/CSOSN
+        icms_tag = None
+        if imp_icms is not None:
+            for tag in icms_tags:
+                icms_tag = imp_icms.find(f'.//nfe:ICMS{tag}', namespaces=ns)
+                if icms_tag is not None:
+                    break
+            if icms_tag is None:
+                for tag in cson_tags:
+                    icms_tag = imp_icms.find(f'.//nfe:ICMSSN{tag}', namespaces=ns)
+                    if icms_tag is not None:
+                        break
+
+        icms_fields = [
+            ("Origem ICMS", './/nfe:orig'),
+            ("CST ICMS", './/nfe:CST'),
+            ("CSOSN", './/nfe:CSOSN'),
+            ("BC ICMS", './/nfe:vBC'),
+            ("Alíquota ICMS", './/nfe:pICMS'),
+            ("ICMS", './/nfe:vICMS'),
+            ("Alíquota adrem ICMS", './/nfe:adRemICMS'),
+            ("ICMS próprio", './/nfe:vICMSMono'),
+            ("Redução BC ICMS", './/nfe:pRedBC'),
+            ("ICMS Op", './/nfe:vICMSOp'),
+            ("Redução BC ICMS ST", './/nfe:pRedBCST'),
+            ("BC ICMS ST", './/nfe:vBCST'),
+            ("Alíquota ICMS ST", './/nfe:pICMSST'),
+            ("Valor ICMS ST", './/nfe:vICMSST'),
+            ("BC ICMS ST retido", './/nfe:vBCSTRet'),
+            ("Valor ICMS ST retido", './/nfe:vICMSSTRet'),
+            ("Alíquota ST", './/nfe:pST'),
+            ("ICMS Substituto", './/nfe:vICMSSubstituto'),
+            ("Alíquota adrem retido", './/nfe:adRemICMSReten'),
+            ("ICMS próprio retido", './/nfe:vICMSMonoReten'),
+            ("Alíquota adrem retido anteriormente", './/nfe:adRemICMSRet'),
+            ("ICMS retido anteriormente", './/nfe:vICMSMonoRet'),
+            ("ICMS próprio Op", './/nfe:vICMSMonoOp'),
+            ("Percentual do diferimento ICMS", './/nfe:pDif'),
+            ("ICMS próprio diferido", './/nfe:vICMSMonoDif'),
+            ("ICMS diferido", './/nfe:vICMSDif'),
+            ("Alíquota ICMS Efetivo", './/nfe:pICMSEfet'),
+            ("ICMS Efetivo", './/nfe:vICMSEfet'),
+            ("Alíquota crédito ICMS SN", './/nfe:pCredSN'),
+            ("Crédito ICMS SN", './/nfe:vCredICMSSN'),
+            ("Percentual MVAST", './/nfe:pMVAST'),
+        ]
+        for label, path in icms_fields:
+            product[label] = get_text(icms_tag, path, ns) if icms_tag is not None else None
+
+        # IPI
+        ipi_tag = None
+        if imposto is not None:
+            for tag in trib_tags:
+                ipi_tag = imposto.find(f'.//nfe:IPI/nfe:IPI{tag}', namespaces=ns)
+                if ipi_tag is not None:
+                    break
+        product["Enquadramento IPI"] = get_text(imposto, './/nfe:IPI/nfe:cEnq', ns)
+        product["CST IPI"] = get_text(ipi_tag, './/nfe:CST', ns) if ipi_tag is not None else None
+        product["BC IPI"] = get_text(ipi_tag, './/nfe:vBC', ns) if ipi_tag is not None else None
+        product["Alíquota IPI"] = get_text(ipi_tag, './/nfe:pIPI', ns) if ipi_tag is not None else None
+        product["IPI"] = get_text(ipi_tag, './/nfe:vIPI', ns) if ipi_tag is not None else None
+
+        # PIS
+        pis_tag = None
+        if imposto is not None:
+            for tag in trib_tags:
+                pis_tag = imposto.find(f'.//nfe:PIS/nfe:PIS{tag}', namespaces=ns)
+                if pis_tag is not None:
+                    break
+        product["CST PIS"] = get_text(pis_tag, './/nfe:CST', ns) if pis_tag is not None else None
+        product["BC PIS"] = get_text(pis_tag, './/nfe:vBC', ns) if pis_tag is not None else None
+        product["Alíquota PIS"] = get_text(pis_tag, './/nfe:pPIS', ns) if pis_tag is not None else None
+        product["BC PIS Prod"] = get_text(pis_tag, './/nfe:qBCProd', ns) if pis_tag is not None else None
+        product["Alíquota PIS Prod"] = get_text(pis_tag, './/nfe:vAliqProd', ns) if pis_tag is not None else None
+        product["PIS"] = get_text(pis_tag, './/nfe:vPIS', ns) if pis_tag is not None else None
+
+        # COFINS
+        cofins_tag = None
+        if imposto is not None:
+            for tag in trib_tags:
+                cofins_tag = imposto.find(f'.//nfe:COFINS/nfe:COFINS{tag}', namespaces=ns)
+                if cofins_tag is not None:
+                    break
+        product["CST COFINS"] = get_text(cofins_tag, './/nfe:CST', ns) if cofins_tag is not None else None
+        product["BC COFINS"] = get_text(cofins_tag, './/nfe:vBC', ns) if cofins_tag is not None else None
+        product["Alíquota COFINS"] = get_text(cofins_tag, './/nfe:pCOFINS', ns) if cofins_tag is not None else None
+        product["BC COFINS Prod"] = get_text(cofins_tag, './/nfe:qBCProd', ns) if cofins_tag is not None else None
+        product["Alíquota COFINS Prod"] = get_text(cofins_tag, './/nfe:vAliqProd', ns) if cofins_tag is not None else None
+        product["COFINS"] = get_text(cofins_tag, './/nfe:vCOFINS', ns) if cofins_tag is not None else None
+
+        # ISSQN
+        issqn = imposto.find('.//nfe:ISSQN', namespaces=ns) if imposto is not None else None
+        issqn_fields = [
+            ("BC ISSQN", './/nfe:vBC'),
+            ("Alíquota ISSQN", './/nfe:vAliq'),
+            ("ISSQN", './/nfe:vISSQN'),
+            ("Deduções ISSQN", './/nfe:vDeducao'),
+            ("Outras retenções ISSQN", './/nfe:vOutro'),
+            ("Desconto Incondicionado ISSQN", './/nfe:vDescIncond'),
+            ("Desconto Condicionado ISSQN", './/nfe:vDescCond'),
+            ("ISSQN Retido", './/nfe:vISSRet'),
+            ("Código Serviço", './/nfe:cServico'),
+            ("Código Município", './/nfe:cMun'),
+            ("Número Processo", './/nfe:nProcesso'),
+        ]
+        for label, path in issqn_fields:
+            product[label] = get_text(issqn, path, ns) if issqn is not None else None
+
+        products.append(product)
+    return products

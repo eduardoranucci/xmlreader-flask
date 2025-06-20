@@ -1,6 +1,8 @@
 from dateutil.parser import parse
 
 def get_text(element, path, ns):
+    if element is None:
+        return None
     elem = element.find(path, namespaces=ns)
     return elem.text if elem is not None else None
 

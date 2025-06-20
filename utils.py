@@ -1,20 +1,8 @@
 from openpyxl.utils import get_column_letter
 from parser import parse_nfe, parse_nfse
-from dateutil.parser import parse
 from openpyxl import Workbook
 from io import BytesIO
 
-def get_text(element, path, ns):
-    elem = element.find(path, namespaces=ns)
-    return elem.text if elem is not None else None
-
-def parse_date(date):
-    try:
-        parsed_date = parse(date)
-        return parsed_date.strftime("%d/%m/%Y")
-    except Exception:
-        return date
-    
 def merge_parsed_data(files, xml_type):
     data = {}
     for file in files:

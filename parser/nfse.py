@@ -1,4 +1,4 @@
-from utils import get_text, parse_date
+from parser.utils import get_text, parse_date
 from lxml import etree
 
 def parse_nfse(xml_data):

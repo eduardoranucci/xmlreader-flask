@@ -1,9 +1,6 @@
 from flask import Flask, render_template, request, send_file, session
-from openpyxl.utils import get_column_letter
-from parser import parser_nfe, parser_nfse
-from openpyxl import Workbook
+from utils import merge_parsed_data, generate_excel
 from datetime import datetime
-from io import BytesIO
 import json
 
 app = Flask(__name__)
@@ -19,16 +16,10 @@ def index():
         files = request.files.getlist("xml_files")
         xml_type = request.form.get("xml_type")
         
-        data = []
-        for file in files:
-            if file.filename.lower().endswith(".xml"):
-                try:
-                    if xml_type == "nfe":
-                        data.append(parser_nfe(file.read()))
-                    elif xml_type == "nfse":
-                        data.extend(parser_nfse(file.read()))
-                except Exception as e:
-                    return render_template("error.html", msg=f"Erro ao processar o arquivo {file.filename}: {e}"), 500
+        try:
+            data = merge_parsed_data(files, xml_type)
+        except Exception as e:
+            return render_template("error.html", msg=str(e)), 500
 
         if data:
             session["parsed_data"] = json.dumps(data)
@@ -45,28 +36,7 @@ def export():
         return render_template("error.html", msg="Nenhum dado para exportar!"), 400
 
     data = json.loads(session["parsed_data"])
-
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "Geral"
-
-    headers = list(data[0].keys())
-    sheet.append(headers)
-
-    for row in data:
-        sheet.append(list(row.values()))
-
-    for i, col in enumerate(sheet.columns, 1):
-        max_length = 0
-        for cell in col:
-            if cell.value:
-                max_length = max(max_length, len(str(cell.value)))
-        sheet.column_dimensions[get_column_letter(i)].width = max_length + 2
-
-    excel_buffer = BytesIO()
-    workbook.save(excel_buffer)
-    excel_buffer.seek(0)
-    
+    excel_buffer = generate_excel(data)
     timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
     return send_file(
         excel_buffer,

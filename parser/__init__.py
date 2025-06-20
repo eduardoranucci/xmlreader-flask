@@ -1,2 +1,2 @@
-from .nfe import parser_nfe
-from .nfse import parser_nfse
+from .nfe import parse_nfe
+from .nfse import parse_nfse

@@ -1,36 +1,76 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="p-4 max-w-7xl mx-auto">
-        <h2 class="text-xl font-bold mb-4">Resultados</h2>
+<div class="p-4 max-w-7xl mx-auto">
+    <h2 class="text-xl font-bold mb-4">Resultados</h2>
 
-        <div class="flex justify-between items-center mb-4">
-            <form action="/export" method="post">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Exportar para
-                    Excel</button>
-            </form>
-            <a href="/" class="text-sm text-blue-600 hover:underline">← Voltar</a>
+    <div class="flex justify-between items-center mb-4">
+        <form action="/export" method="post">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Exportar para
+                Excel</button>
+        </form>
+        <a href="/" class="text-sm text-blue-600 hover:underline">← Voltar</a>
+    </div>
+
+    <div>
+        <!-- Abas -->
+        <div class="flex border-b mb-4" id="tab-buttons">
+            {% for sheet_name in data.keys() %}
+            <button type="button"
+                class="tab-btn px-4 py-2 -mb-px border-b-2 border-transparent font-semibold focus:outline-none hover:text-blue-700"
+                data-tab="tab-{{ loop.index0 }}">{{ sheet_name }}</button>
+            {% endfor %}
         </div>
-
-        <div class="overflow-auto shadow rounded">
-            <table class="min-w-full text-sm text-left text-gray-700 border">
-                <thead class="bg-gray-100 font-bold">
-                    <tr>
-                        {% for key in data[0].keys() %}
-                            <th class="px-4 py-2 border whitespace-nowrap">{{ key }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in data %}
-                        <tr class="hover:bg-gray-50">
-                            {% for value in row.values() %}
+        <!-- Conteúdo das abas -->
+        <div>
+            {% for sheet_name, rows in data.items() %}
+            <div class="tab-content" id="tab-{{ loop.index0 }}" style="display: none;">
+                <div class="overflow-auto shadow rounded">
+                    {% if rows %}
+                    <table class="min-w-full text-sm text-left text-gray-700 border">
+                        <thead class="bg-gray-100 font-bold">
+                            <tr>
+                                {% for key in rows[0].keys() %}
+                                <th class="px-4 py-2 border whitespace-nowrap">{{ key }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr class="hover:bg-gray-50">
+                                {% for value in row.values() %}
                                 <td class="px-4 py-2 border whitespace-nowrap">{{ value }}</td>
+                                {% endfor %}
+                            </tr>
                             {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-gray-500 italic p-4">Nenhum dado nesta aba.</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            function activateTab(idx) {
+                tabButtons.forEach((btn, i) => {
+                    btn.classList.toggle('border-blue-600', i === idx);
+                    btn.classList.toggle('text-blue-600', i === idx);
+                });
+                tabContents.forEach((tab, i) => {
+                    tab.style.display = (i === idx) ? 'block' : 'none';
+                });
+            }
+            if (tabButtons.length) activateTab(0);
+            tabButtons.forEach((btn, idx) => {
+                btn.addEventListener('click', () => activateTab(idx));
+            });
+        });
+    </script>
+</div>
 {% endblock %}
